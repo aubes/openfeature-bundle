@@ -23,7 +23,10 @@ class OpenFeatureBundle extends AbstractBundle
 {
     public function configure(DefinitionConfigurator $definition): void
     {
-        $definition->rootNode()
+        /** @var \Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition $rootNode */
+        $rootNode = $definition->rootNode();
+
+        $rootNode
             ->children()
                 ->scalarNode('provider')
                     ->info('Service ID of the OpenFeature provider. Defaults to the built-in InMemoryProvider.')
