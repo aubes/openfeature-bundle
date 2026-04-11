@@ -1,0 +1,63 @@
+{
+    "name": "aubes/openfeature-bundle",
+    "description": "Symfony bundle for OpenFeature PHP SDK",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "keywords": ["symfony", "openfeature", "feature-flag", "feature-toggle", "cncf"],
+    "authors": [
+        {
+            "name": "Aubes"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/aubes/openfeature-bundle/issues",
+        "source": "https://github.com/aubes/openfeature-bundle"
+    },
+    "require": {
+        "php": ">=8.2",
+        "open-feature/sdk": "^2.0",
+        "symfony/config": "^6.4|^7.4|^8.0",
+        "symfony/dependency-injection": "^6.4|^7.4|^8.0",
+        "symfony/http-kernel": "^6.4|^7.4|^8.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0",
+        "phpunit/phpunit": "^11.0|^12.0",
+        "rector/rector": "^2.4",
+        "symfony/framework-bundle": "^6.4|^7.0|^8.0",
+        "symfony/security-core": "^6.4|^7.0|^8.0",
+        "twig/twig": "^3.24"
+    },
+    "suggest": {
+        "symfony/security-core": "Required for auto-populating the targeting key from the authenticated user and for AccessDeniedException support",
+        "twig/twig": "Required for the feature() Twig function"
+    },
+    "autoload": {
+        "psr-4": {
+            "Aubes\\OpenFeatureBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Aubes\\OpenFeatureBundle\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "analyse": "vendor/bin/phpstan analyse --memory-limit=512M",
+        "cs-fix": "vendor/bin/php-cs-fixer fix --allow-risky=yes --config=.php-cs-fixer.php",
+        "check": [
+            "@cs-fix --dry-run",
+            "@analyse",
+            "@test"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
