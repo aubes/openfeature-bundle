@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Aubes\OpenFeatureBundle;
 
+use Aubes\OpenFeatureBundle\Command\DebugFeatureFlagsCommand;
 use Aubes\OpenFeatureBundle\DependencyInjection\Compiler\RegisterHooksPass;
 use Aubes\OpenFeatureBundle\DependencyInjection\Compiler\SetProviderPass;
 use Aubes\OpenFeatureBundle\EvaluationContext\UserEvaluationContextProvider;
 use Aubes\OpenFeatureBundle\Profiler\OpenFeatureDataCollector;
 use Aubes\OpenFeatureBundle\Profiler\ProfilerHook;
 use OpenFeature\interfaces\flags\API;
+use OpenFeature\interfaces\flags\Client;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -18,6 +20,7 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
+use Symfony\Component\Routing\RouterInterface;
 
 class OpenFeatureBundle extends AbstractBundle
 {
@@ -135,6 +138,16 @@ class OpenFeatureBundle extends AbstractBundle
             $definition->addArgument(new Reference('security.token_storage'));
             $definition->addTag('openfeature.evaluation_context_provider', ['priority' => 0]);
             $builder->setDefinition(UserEvaluationContextProvider::class, $definition);
+        }
+
+        if ($builder->getParameter('kernel.debug') && \interface_exists(RouterInterface::class)) {
+            $builder->register(DebugFeatureFlagsCommand::class)
+                ->setArguments([
+                    new Reference(Client::class),
+                    new Reference(API::class),
+                    new Reference('router'),
+                ])
+                ->addTag('console.command');
         }
 
         if ($builder->getParameter('kernel.debug')) {

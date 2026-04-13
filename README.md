@@ -1,12 +1,33 @@
 # OpenFeature Bundle
 
+[![CI](https://github.com/aubes/openfeature-bundle/actions/workflows/php.yml/badge.svg)](https://github.com/aubes/openfeature-bundle/actions/workflows/php.yml)
 [![Latest Version](https://img.shields.io/packagist/v/aubes/openfeature-bundle.svg)](https://packagist.org/packages/aubes/openfeature-bundle)
 [![PHP Version](https://img.shields.io/badge/php-8.2%2B-blue.svg)](https://www.php.net)
 [![Symfony Version](https://img.shields.io/badge/symfony-6.4%20%7C%207.x%20%7C%208.x-green.svg)](https://symfony.com)
 
-Symfony bundle for the [OpenFeature PHP SDK](https://github.com/open-feature/php-sdk) -- the [CNCF standard](https://openfeature.dev) for feature flags.
+Feature flags, the Symfony way.
 
-Switch between providers (Flagd, Flagsmith, Unleash, LaunchDarkly...) without touching your application code.
+Symfony bundle for the [OpenFeature PHP SDK](https://github.com/open-feature/php-sdk) — the [CNCF standard](https://openfeature.dev) for feature flags.
+
+```php
+class CheckoutController
+{
+    #[FeatureGate('new_checkout')]
+    public function checkout(
+        #[FeatureFlag('dark_mode')] bool $darkMode,
+        #[FeatureFlag('max_items')] int $maxItems,
+    ): Response {
+        // values resolved from your feature flag provider
+    }
+}
+```
+
+- **`#[FeatureGate]`** blocks access when a flag is off
+- **`#[FeatureFlag]`** injects resolved values, fully typed
+- **Twig** helpers: `feature('flag')`, `feature_value('flag', default)`
+- **Symfony Profiler** panel with evaluated flags, provider info, and context
+- **Any provider**: InMemory, EnvVar, Redis built-in, or plug your own (Flagd, Unleash, LaunchDarkly...)
+- **FrankenPHP** worker mode safe out of the box
 
 ## Requirements
 

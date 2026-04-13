@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Aubes\OpenFeatureBundle\ArgumentResolver\FeatureFlagValueResolver;
-use Aubes\OpenFeatureBundle\Command\DebugFeatureFlagsCommand;
 use Aubes\OpenFeatureBundle\EventListener\EvaluationContextListener;
 use Aubes\OpenFeatureBundle\EventListener\FeatureGateListener;
 use Aubes\OpenFeatureBundle\Provider\EnvVarProvider;
@@ -14,7 +13,6 @@ use OpenFeature\interfaces\flags\API;
 use OpenFeature\interfaces\flags\Client;
 use OpenFeature\OpenFeatureAPI;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
-use Symfony\Component\Routing\RouterInterface;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
@@ -62,15 +60,5 @@ return static function (ContainerConfigurator $container): void {
         $services->set(OpenFeatureExtension::class)
             ->args([service(Client::class)])
             ->tag('twig.extension');
-    }
-
-    if (\interface_exists(RouterInterface::class)) {
-        $services->set(DebugFeatureFlagsCommand::class)
-            ->args([
-                service(Client::class),
-                service(API::class),
-                service('router'),
-            ])
-            ->tag('console.command');
     }
 };
