@@ -7,7 +7,6 @@ use Aubes\OpenFeatureBundle\EventListener\EvaluationContextListener;
 use Aubes\OpenFeatureBundle\EventListener\FeatureGateListener;
 use Aubes\OpenFeatureBundle\Provider\EnvVarProvider;
 use Aubes\OpenFeatureBundle\Provider\InMemoryProvider;
-use Aubes\OpenFeatureBundle\Reset\OpenFeatureResetter;
 use Aubes\OpenFeatureBundle\Twig\OpenFeatureExtension;
 use OpenFeature\interfaces\flags\API;
 use OpenFeature\interfaces\flags\Client;
@@ -38,7 +37,8 @@ return static function (ContainerConfigurator $container): void {
             service(API::class),
             tagged_iterator('openfeature.evaluation_context_provider'),
         ])
-        ->tag('kernel.event_listener', ['event' => 'kernel.request', 'method' => 'onKernelRequest', 'priority' => 4]);
+        ->tag('kernel.event_listener', ['event' => 'kernel.request', 'method' => 'onKernelRequest', 'priority' => 4])
+        ->tag('kernel.reset', ['method' => 'reset']);
 
     $services->set(FeatureGateListener::class)
         ->args([
@@ -51,10 +51,6 @@ return static function (ContainerConfigurator $container): void {
     $services->set(FeatureFlagValueResolver::class)
         ->args([service(Client::class)])
         ->tag('controller.argument_value_resolver');
-
-    $services->set(OpenFeatureResetter::class)
-        ->args([service(API::class)])
-        ->tag('kernel.reset', ['method' => 'reset']);
 
     if (\class_exists(Twig\Extension\AbstractExtension::class)) {
         $services->set(OpenFeatureExtension::class)
