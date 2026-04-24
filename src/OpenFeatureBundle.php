@@ -7,11 +7,14 @@ namespace Aubes\OpenFeatureBundle;
 use Aubes\OpenFeatureBundle\Command\DebugFeatureFlagsCommand;
 use Aubes\OpenFeatureBundle\DependencyInjection\Compiler\RegisterHooksPass;
 use Aubes\OpenFeatureBundle\DependencyInjection\Compiler\SetProviderPass;
+use Aubes\OpenFeatureBundle\EvaluationContext\EvaluationContextProviderInterface;
 use Aubes\OpenFeatureBundle\EvaluationContext\UserEvaluationContextProvider;
+use Aubes\OpenFeatureBundle\Profiler\ContextProviderRecorder;
 use Aubes\OpenFeatureBundle\Profiler\OpenFeatureDataCollector;
 use Aubes\OpenFeatureBundle\Profiler\ProfilerHook;
 use OpenFeature\interfaces\flags\API;
 use OpenFeature\interfaces\flags\Client;
+use OpenFeature\interfaces\hooks\Hook;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -99,6 +102,12 @@ class OpenFeatureBundle extends AbstractBundle
         $loader = new PhpFileLoader($builder, new FileLocator(__DIR__ . '/Resources/config'));
         $loader->load('services.php');
 
+        $builder->registerForAutoconfiguration(Hook::class)
+            ->addTag('openfeature.hook');
+
+        $builder->registerForAutoconfiguration(EvaluationContextProviderInterface::class)
+            ->addTag('openfeature.evaluation_context_provider');
+
         $builder->setParameter('open_feature.provider', $config['provider']);
         $builder->setParameter('open_feature.flags', $config['flags']);
 
@@ -156,9 +165,15 @@ class OpenFeatureBundle extends AbstractBundle
                 ->setAutoconfigured(true)
                 ->addTag('openfeature.hook');
 
+            $builder->register(ContextProviderRecorder::class)
+                ->setPublic(false)
+                ->setAutoconfigured(true)
+                ->addTag('kernel.reset', ['method' => 'reset']);
+
             $builder->register(OpenFeatureDataCollector::class)
                 ->addArgument(new Reference(ProfilerHook::class))
                 ->addArgument(new Reference(API::class))
+                ->addArgument(new Reference(ContextProviderRecorder::class))
                 ->addTag('data_collector', [
                     'template' => '@OpenFeature/Collector/openfeature.html.twig',
                     'id' => 'open_feature',

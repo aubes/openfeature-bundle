@@ -41,7 +41,7 @@ class TenantContextProvider implements EvaluationContextProviderInterface
 }
 ```
 
-> **Note:** The interface is autoconfigured: if your service implements `EvaluationContextProviderInterface`, the `openfeature.evaluation_context_provider` tag is added automatically.
+The service is picked up automatically, no tag or config needed.
 
 ## Multiple providers
 
@@ -49,4 +49,4 @@ Multiple context providers are supported. Their contexts are merged via the SDK'
 
 ## FrankenPHP worker mode
 
-The global `EvaluationContext` is automatically reset between requests via Symfony's `kernel.reset` mechanism. No configuration required.
+The global `EvaluationContext` is automatically cleared between requests. No configuration required.

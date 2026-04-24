@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Aubes\OpenFeatureBundle\EventListener;
 
 use Aubes\OpenFeatureBundle\EvaluationContext\EvaluationContextProviderInterface;
+use Aubes\OpenFeatureBundle\Event\EvaluationContextContributedEvent;
 use OpenFeature\implementation\flags\EvaluationContext;
 use OpenFeature\implementation\flags\MutableEvaluationContext;
 use OpenFeature\interfaces\flags\API;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Contracts\Service\ResetInterface;
 
@@ -17,6 +19,7 @@ class EvaluationContextListener implements ResetInterface
     public function __construct(
         private readonly API $api,
         private readonly iterable $providers = [],
+        private readonly ?EventDispatcherInterface $dispatcher = null,
     ) {
     }
 
@@ -29,9 +32,12 @@ class EvaluationContextListener implements ResetInterface
         $contexts = [];
         foreach ($this->providers as $provider) {
             $context = $provider->getContext($event->getRequest());
-            if ($context !== null) {
-                $contexts[] = $context;
+            if ($context === null) {
+                continue;
             }
+
+            $contexts[] = $context;
+            $this->dispatcher?->dispatch(new EvaluationContextContributedEvent($provider, $context));
         }
 
         if ($contexts === []) {

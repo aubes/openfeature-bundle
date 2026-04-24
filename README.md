@@ -25,6 +25,8 @@ class CheckoutController
 - **`#[FeatureGate]`** blocks access when a flag is off
 - **`#[FeatureFlag]`** injects resolved values, fully typed
 - **Twig** helpers: `feature('flag')`, `feature_value('flag', default)`
+- **Hooks** autoconfigured: implement `Hook` for logging, tracing, validation
+- **Evaluation context** autoconfigured: implement `EvaluationContextProviderInterface` to feed targeting attributes
 - **Symfony Profiler** panel with evaluated flags, provider info, and context
 - **Any provider**: basic built-ins (InMemory, EnvVar, Redis) for quick starts, or plug any real OpenFeature provider (Flagd, ConfigCat, Unleash, LaunchDarkly...)
 - **FrankenPHP** worker mode safe out of the box

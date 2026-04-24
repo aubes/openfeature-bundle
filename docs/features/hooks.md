@@ -4,57 +4,58 @@ Hooks run around every flag evaluation. They are useful for logging, tracing, me
 
 ## Registering a hook
 
-Implement the OpenFeature `Hook` interface and tag the service with `openfeature.hook`:
+A service implementing the OpenFeature `Hook` interface is autoconfigured with the `openfeature.hook` tag.
 
 ```php
 use OpenFeature\interfaces\hooks\Hook;
 use OpenFeature\interfaces\hooks\HookContext;
 use OpenFeature\interfaces\hooks\HookHints;
 use OpenFeature\interfaces\provider\ResolutionDetails;
+use Psr\Log\LoggerInterface;
 
 class LoggerHook implements Hook
 {
-    public function before(HookContext $context, HookHints $hints): ?EvaluationContext
-    {
-        return null;
-    }
+    public function __construct(private readonly LoggerInterface $logger) {}
 
     public function after(HookContext $context, ResolutionDetails $details, HookHints $hints): void
     {
-        // log, trace, metrics...
+        $this->logger->info('Flag evaluated', [
+            'flag'  => $context->getFlagKey(),
+            'value' => $details->getValue(),
+        ]);
     }
 
-    public function error(HookContext $context, \Throwable $error, HookHints $hints): void
-    {
-        // handle evaluation errors
-    }
-
-    public function finally(HookContext $context, HookHints $hints): void
-    {
-        // cleanup
-    }
-
-    public function supportsFlagValueType(): bool
-    {
-        return true; // support all flag types
-    }
+    // before(), error(), finally(), supportsFlagValueType() are also available
+    // see: https://openfeature.dev/specification/sections/hooks
 }
 ```
 
+### Hooks with constructor options
+
+When a hook takes constructor arguments (for example the `RegexpValidatorHook` from [php-sdk-contrib](https://github.com/open-feature/php-sdk-contrib/blob/main/hooks/Validators/README.md)), declare the service with its arguments. Autoconfiguration still adds the tag:
+
 ```yaml
 services:
-    App\OpenFeature\LoggerHook:
-        tags: [openfeature.hook]
+    App\Hook\HexadecimalValidatorHook:
+        class: OpenFeature\Hooks\Validators\RegexpValidatorHook
+        arguments: ['/^[0-9a-f]+$/']
+```
+
+### Per-call hooks (opt-out)
+
+If you want a hook to be applied only at call-site via `EvaluationOptions` and not globally, disable autoconfiguration on that service:
+
+```yaml
+services:
+    App\Hook\HexadecimalValidatorHook:
+        class: OpenFeature\Hooks\Validators\RegexpValidatorHook
+        arguments: ['/^[0-9a-f]+$/']
+        autoconfigure: false
 ```
 
 ## Hook lifecycle
 
-Hooks are called in the following order for each flag evaluation:
-
-1. `before()` : before the provider resolves the flag
-2. `after()` : after successful resolution
-3. `error()` : if the provider throws an exception (instead of `after`)
-4. `finally()` : always called, regardless of success or failure
+See the [OpenFeature hooks specification](https://openfeature.dev/specification/sections/hooks) for the full lifecycle.
 
 ## Pre-built hooks
 
