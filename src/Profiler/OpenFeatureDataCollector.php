@@ -14,6 +14,7 @@ class OpenFeatureDataCollector extends DataCollector
     public function __construct(
         private readonly ProfilerHook $hook,
         private readonly API $api,
+        private readonly ?ContextProviderRecorder $recorder = null,
     ) {
     }
 
@@ -23,6 +24,8 @@ class OpenFeatureDataCollector extends DataCollector
             'evaluations' => $this->hook->getEvaluations(),
             'provider' => $this->api->getProviderMetadata()->getName(),
             'evaluation_context' => $this->serializeContext(),
+            'hooks' => $this->collectHooks(),
+            'context_providers' => $this->collectContextProviders(),
         ];
     }
 
@@ -57,6 +60,24 @@ class OpenFeatureDataCollector extends DataCollector
         return $context;
     }
 
+    /** @return list<class-string> */
+    public function getHooks(): array
+    {
+        /** @var list<class-string> $hooks */
+        $hooks = $this->data['hooks'] ?? [];
+
+        return $hooks;
+    }
+
+    /** @return list<array{provider: class-string, targeting_key: ?string, attributes: array<array-key, mixed>}> */
+    public function getContextProviders(): array
+    {
+        /** @var list<array{provider: class-string, targeting_key: ?string, attributes: array<array-key, mixed>}> $providers */
+        $providers = $this->data['context_providers'] ?? [];
+
+        return $providers;
+    }
+
     public function getName(): string
     {
         return 'open_feature';
@@ -89,5 +110,37 @@ class OpenFeatureDataCollector extends DataCollector
             'targeting_key' => $this->anonymizeTargetingKey($context->getTargetingKey()),
             'attributes' => $context->getAttributes()->toArray(),
         ];
+    }
+
+    /** @return list<class-string> */
+    private function collectHooks(): array
+    {
+        $hooks = [];
+        foreach ($this->api->getHooks() as $hook) {
+            if ($hook instanceof ProfilerHook) {
+                continue;
+            }
+
+            $hooks[] = $hook::class;
+        }
+
+        return $hooks;
+    }
+
+    /** @return list<array{provider: class-string, targeting_key: ?string, attributes: array<array-key, mixed>}> */
+    private function collectContextProviders(): array
+    {
+        if ($this->recorder === null) {
+            return [];
+        }
+
+        return \array_map(
+            fn (array $c): array => [
+                'provider' => $c['provider'],
+                'targeting_key' => $this->anonymizeTargetingKey($c['targeting_key']),
+                'attributes' => $c['attributes'],
+            ],
+            $this->recorder->getContributions(),
+        );
     }
 }

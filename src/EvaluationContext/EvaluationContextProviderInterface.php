@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Aubes\OpenFeatureBundle\EvaluationContext;
 
 use OpenFeature\interfaces\flags\EvaluationContext;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -15,7 +14,6 @@ use Symfony\Component\HttpFoundation\Request;
  * Multiple providers are supported and their contexts are merged in priority order
  * (highest priority first). Use the "priority" attribute on the tag to control ordering.
  */
-#[AutoconfigureTag('openfeature.evaluation_context_provider')]
 interface EvaluationContextProviderInterface
 {
     public function getContext(Request $request): ?EvaluationContext;

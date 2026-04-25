@@ -78,6 +78,64 @@
         </table>
     {% endif %}
 
+    <h3>Context Providers</h3>
+
+    {% if collector.contextProviders is empty %}
+        <div class="empty">
+            <p>No context provider contributed during this request.</p>
+        </div>
+    {% else %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Targeting key</th>
+                    <th>Attributes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contribution in collector.contextProviders %}
+                    <tr>
+                        <td><code>{{ contribution.provider }}</code></td>
+                        <td>{{ contribution.targeting_key ?? '-' }}</td>
+                        <td>
+                            {% if contribution.attributes is empty %}
+                                -
+                            {% else %}
+                                {% for key, value in contribution.attributes %}
+                                    <code>{{ key }}</code>: {{ value }}{{ not loop.last ? ', ' : '' }}
+                                {% endfor %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <h3>Registered Hooks</h3>
+
+    {% if collector.hooks is empty %}
+        <div class="empty">
+            <p>No hooks are registered.</p>
+        </div>
+    {% else %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Hook</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for hook in collector.hooks %}
+                    <tr>
+                        <td><code>{{ hook }}</code></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
     <h3>Flag Evaluations</h3>
 
     {% if collector.evaluations is empty %}
