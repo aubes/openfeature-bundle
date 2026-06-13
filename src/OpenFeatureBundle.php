@@ -16,6 +16,7 @@ use OpenFeature\interfaces\flags\API;
 use OpenFeature\interfaces\flags\Client;
 use OpenFeature\interfaces\hooks\Hook;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -35,8 +36,31 @@ class OpenFeatureBundle extends AbstractBundle
         $rootNode
             ->children()
                 ->scalarNode('provider')
-                    ->info('Service ID of the OpenFeature provider. Defaults to the built-in InMemoryProvider.')
-                    ->defaultValue(Provider\InMemoryProvider::class)
+                    ->info('Service ID of the OpenFeature provider. Defaults to the built-in InMemoryProvider. Mutually exclusive with "providers".')
+                    ->defaultNull()
+                ->end()
+                ->arrayNode('providers')
+                    ->info('Multiple providers combined through the SDK MultiProvider. Keys are provider names, values are service IDs. Evaluation follows declaration order.')
+                    ->useAttributeAsKey('name')
+                    ->scalarPrototype()->end()
+                ->end()
+                ->arrayNode('strategy')
+                    ->info('Evaluation strategy used by the MultiProvider. Shorthand: a plain string sets "type".')
+                    ->addDefaultsIfNotSet()
+                    ->beforeNormalization()
+                        ->ifString()
+                        ->then(static fn (string $v) => ['type' => $v])
+                    ->end()
+                    ->children()
+                        ->enumNode('type')
+                            ->values(['first_match', 'first_successful', 'comparison'])
+                            ->defaultValue('first_match')
+                        ->end()
+                        ->scalarNode('fallback')
+                            ->info('Provider name (key of "providers") used as fallback on mismatch. Required and only allowed when type is "comparison".')
+                            ->defaultNull()
+                        ->end()
+                    ->end()
                 ->end()
                 ->arrayNode('flags')
                     ->info('Flag values for the built-in InMemoryProvider (local/dev use).')
@@ -61,6 +85,10 @@ class OpenFeatureBundle extends AbstractBundle
                     ->children()
                         ->enumNode('user_provider')
                             ->info('Populate EvaluationContext targeting key from the authenticated Symfony user. "auto" enables it if symfony/security-core is available.')
+                            ->beforeNormalization()
+                                ->ifTrue(\is_bool(...))
+                                ->then(static fn (bool $v): string => $v ? 'true' : 'false')
+                            ->end()
                             ->values(['auto', 'true', 'false'])
                             ->defaultValue('auto')
                         ->end()
@@ -89,8 +117,44 @@ class OpenFeatureBundle extends AbstractBundle
     }
 
     /**
+     * @param array{provider: null|string, providers: array<string, string>, strategy: array{type: string, fallback: null|string}} $config
+     */
+    private function validateProviderConfig(array $config): void
+    {
+        $providers = $config['providers'];
+        $strategy = $config['strategy'];
+
+        if ($config['provider'] !== null && $providers !== []) {
+            throw new InvalidConfigurationException('Invalid "open_feature" configuration: "provider" and "providers" are mutually exclusive.');
+        }
+
+        if ($providers === [] && $strategy['type'] !== 'first_match') {
+            throw new InvalidConfigurationException('Invalid "open_feature" configuration: "strategy" requires "providers".');
+        }
+
+        if ($strategy['type'] === 'comparison' && $strategy['fallback'] === null) {
+            throw new InvalidConfigurationException('Invalid "open_feature" configuration: the "comparison" strategy requires "strategy.fallback".');
+        }
+
+        if ($strategy['type'] !== 'comparison' && $strategy['fallback'] !== null) {
+            throw new InvalidConfigurationException('Invalid "open_feature" configuration: "strategy.fallback" is only allowed when "strategy.type" is "comparison".');
+        }
+
+        if ($strategy['fallback'] !== null && !isset($providers[$strategy['fallback']])) {
+            throw new InvalidConfigurationException('Invalid "open_feature" configuration: "strategy.fallback" must be one of the names declared in "providers".');
+        }
+
+        $names = \array_map(\strtolower(...), \array_keys($providers));
+        if (\count($names) !== \count(\array_unique($names))) {
+            throw new InvalidConfigurationException('Invalid "open_feature" configuration: provider names in "providers" must be unique (case-insensitive, the SDK normalizes them to lowercase).');
+        }
+    }
+
+    /**
      * @param array{
-     *     provider: string,
+     *     provider: null|string,
+     *     providers: array<string, string>,
+     *     strategy: array{type: string, fallback: null|string},
      *     flags: array<string, mixed>,
      *     redis?: array{client: string, prefix: string},
      *     feature_flag: array{on_disabled: string, status_code: int},
@@ -99,6 +163,8 @@ class OpenFeatureBundle extends AbstractBundle
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
+        $this->validateProviderConfig($config);
+
         $loader = new PhpFileLoader($builder, new FileLocator(__DIR__ . '/Resources/config'));
         $loader->load('services.php');
 
@@ -108,7 +174,14 @@ class OpenFeatureBundle extends AbstractBundle
         $builder->registerForAutoconfiguration(EvaluationContextProviderInterface::class)
             ->addTag('openfeature.evaluation_context_provider');
 
-        $builder->setParameter('open_feature.provider', $config['provider']);
+        $provider = $config['provider'];
+        if ($provider === null && $config['providers'] === []) {
+            $provider = Provider\InMemoryProvider::class;
+        }
+
+        $builder->setParameter('open_feature.provider', $provider);
+        $builder->setParameter('open_feature.providers', $config['providers']);
+        $builder->setParameter('open_feature.strategy', $config['strategy']);
         $builder->setParameter('open_feature.flags', $config['flags']);
 
         if (isset($config['redis'])) {
@@ -174,6 +247,8 @@ class OpenFeatureBundle extends AbstractBundle
                 ->addArgument(new Reference(ProfilerHook::class))
                 ->addArgument(new Reference(API::class))
                 ->addArgument(new Reference(ContextProviderRecorder::class))
+                ->addArgument($config['providers'])
+                ->addArgument($config['providers'] === [] ? null : $config['strategy'])
                 ->addTag('data_collector', [
                     'template' => '@OpenFeature/Collector/openfeature.html.twig',
                     'id' => 'open_feature',

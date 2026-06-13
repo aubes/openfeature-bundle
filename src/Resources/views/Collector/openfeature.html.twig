@@ -13,6 +13,16 @@
             <b>Provider</b>
             <span>{{ collector.provider }}</span>
         </div>
+        {% if collector.providers is not empty %}
+            <div class="sf-toolbar-info-piece">
+                <b>Providers</b>
+                <span>{{ collector.providers|keys|join(' → ') }}</span>
+            </div>
+            <div class="sf-toolbar-info-piece">
+                <b>Strategy</b>
+                <span>{{ collector.strategy.type }}</span>
+            </div>
+        {% endif %}
         <div class="sf-toolbar-info-piece">
             <b>Flags evaluated</b>
             <span class="sf-toolbar-status">{{ collector.evaluationCount }}</span>
@@ -46,11 +56,45 @@
             <span class="value">{{ collector.provider }}</span>
             <span class="label">Provider</span>
         </div>
+        {% if collector.strategy %}
+            <div class="metric">
+                <span class="value">{{ collector.strategy.type }}</span>
+                <span class="label">Strategy</span>
+            </div>
+        {% endif %}
         <div class="metric">
             <span class="value">{{ collector.evaluationCount }}</span>
             <span class="label">Flags evaluated</span>
         </div>
     </div>
+
+    {% if collector.providers is not empty %}
+        <h3>Providers</h3>
+        <p class="help">Providers are evaluated in declaration order by the <code>{{ collector.strategy.type }}</code> strategy.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Name</th>
+                    <th>Service</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, service in collector.providers %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <code>{{ name }}</code>
+                            {% if collector.strategy.fallback == name %}
+                                <span class="label status-warning">fallback</span>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ service }}</code></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
 
     {% if collector.evaluationContext is not empty %}
         <h3>Evaluation Context</h3>
