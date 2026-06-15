@@ -5,6 +5,7 @@
 The bundle registers an **OpenFeature panel** in the Symfony Web Debug Toolbar showing:
 
 - Active provider name
+- In multi-provider mode: the evaluation strategy, the fallback marker, and the sub-providers in evaluation order
 - All flags evaluated during the request (key, type, resolved value, reason, error)
 - Global EvaluationContext (targeting key and attributes)
 

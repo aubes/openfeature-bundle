@@ -7,7 +7,7 @@
 
 Feature flags, the Symfony way.
 
-Symfony bundle for the [OpenFeature PHP SDK](https://github.com/open-feature/php-sdk) — the [CNCF standard](https://openfeature.dev) for feature flags.
+Symfony bundle for the [OpenFeature PHP SDK](https://github.com/open-feature/php-sdk), the [CNCF standard](https://openfeature.dev) for feature flags.
 
 ```php
 class CheckoutController
@@ -35,7 +35,7 @@ class CheckoutController
 
 - PHP 8.2+
 - Symfony 6.4, 7.x or 8.x
-- `open-feature/sdk` ^2.0 (implements [OpenFeature spec v0.5.1](https://github.com/open-feature/spec/releases/tag/v0.5.1))
+- `open-feature/sdk` ^2.2 (implements [OpenFeature spec v0.5.1](https://github.com/open-feature/spec/releases/tag/v0.5.1))
 
 ## Quick start
 
@@ -104,6 +104,20 @@ For anything beyond a quick demo (user targeting, percentage rollouts, A/B testi
 | InMemoryProvider *(default)* | Local development, tests | `flags` |
 | EnvVarProvider | Kill switches via env vars | `provider` |
 | RedisProvider | Shared on/off toggles via Redis | `provider` + `redis` |
+
+### Multiple providers
+
+Combine several providers through the SDK `MultiProvider` with the `providers` key (evaluated in declaration order):
+
+```yaml
+open_feature:
+    providers:
+        remote: App\OpenFeature\MyProvider
+        local: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
+    strategy: first_match   # first_match | first_successful | comparison
+```
+
+See [Configuration reference](docs/configuration.md#multiple-providers) for strategy details.
 
 ## Documentation
 

@@ -11,10 +11,16 @@ use Symfony\Component\HttpKernel\DataCollector\DataCollector;
 
 class OpenFeatureDataCollector extends DataCollector
 {
+    /**
+     * @param array<string, string>                           $providers
+     * @param null|array{type: string, fallback: null|string} $strategy
+     */
     public function __construct(
         private readonly ProfilerHook $hook,
         private readonly API $api,
         private readonly ?ContextProviderRecorder $recorder = null,
+        private readonly array $providers = [],
+        private readonly ?array $strategy = null,
     ) {
     }
 
@@ -23,6 +29,8 @@ class OpenFeatureDataCollector extends DataCollector
         $this->data = [
             'evaluations' => $this->hook->getEvaluations(),
             'provider' => $this->api->getProviderMetadata()->getName(),
+            'providers' => $this->providers,
+            'strategy' => $this->providers === [] ? null : $this->strategy,
             'evaluation_context' => $this->serializeContext(),
             'hooks' => $this->collectHooks(),
             'context_providers' => $this->collectContextProviders(),
@@ -49,6 +57,24 @@ class OpenFeatureDataCollector extends DataCollector
         $provider = $this->data['provider'] ?? 'unknown';
 
         return $provider;
+    }
+
+    /** @return array<string, string> */
+    public function getProviders(): array
+    {
+        /** @var array<string, string> $providers */
+        $providers = $this->data['providers'] ?? [];
+
+        return $providers;
+    }
+
+    /** @return null|array{type: string, fallback: null|string} */
+    public function getStrategy(): ?array
+    {
+        /** @var null|array{type: string, fallback: null|string} $strategy */
+        $strategy = $this->data['strategy'] ?? null;
+
+        return $strategy;
     }
 
     /** @return array<string, mixed> */

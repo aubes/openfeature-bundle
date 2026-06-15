@@ -8,7 +8,24 @@ open_feature:
 
     # Service ID of the OpenFeature provider
     # Default: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
+    # Mutually exclusive with "providers"
     provider: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
+
+    # Multiple providers combined through the SDK MultiProvider
+    # Keys are provider names, values are service IDs
+    # Evaluation follows declaration order
+    # Mutually exclusive with "provider"
+    providers:
+        remote: App\OpenFeature\MyProvider
+        local: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
+
+    # Evaluation strategy for the MultiProvider (only when using "providers")
+    # Shorthand: strategy: first_match
+    strategy:
+        type: first_match     # first_match | first_successful | comparison
+        # Provider name used as fallback on mismatch
+        # Required (and only allowed) when type is "comparison"
+        fallback: ~
 
     # Flags for the InMemoryProvider (dev/test use)
     flags:
@@ -52,6 +69,40 @@ open_feature:
 ```
 
 See [Providers](providers/index.md) for available options.
+
+## Multiple providers
+
+Declare several providers under `providers` to combine them through the SDK `MultiProvider` (requires `open-feature/sdk` >= 2.2). Each key is a provider name, each value a service ID. Providers are evaluated in declaration order:
+
+```yaml
+open_feature:
+    providers:
+        remote: App\OpenFeature\MyProvider
+        local: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
+    strategy: first_match
+```
+
+`provider` and `providers` are mutually exclusive.
+
+### Strategies
+
+| Strategy | Behavior |
+|---|---|
+| `first_match` (default) | Sequential. Returns the first provider that knows the flag; `FLAG_NOT_FOUND` moves to the next provider, any other error stops the evaluation. |
+| `first_successful` | Sequential. Returns the first result without error; errors do not stop the chain. |
+| `comparison` | Evaluates all providers and compares results. If they disagree, the result of the `fallback` provider is used. |
+
+The `comparison` strategy requires a `fallback` pointing to one of the declared provider names:
+
+```yaml
+open_feature:
+    providers:
+        remote: App\OpenFeature\MyProvider
+        local: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
+    strategy:
+        type: comparison
+        fallback: local
+```
 
 ## Flags
 

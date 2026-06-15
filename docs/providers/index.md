@@ -37,6 +37,10 @@ Any other provider from [open-feature/php-sdk-contrib](https://github.com/open-f
 | [EnvVarProvider](env-var.md) | Kill switches via env vars, no extra infra |
 | [RedisProvider](redis.md) | Shared on/off toggles when Redis is already in the stack |
 
+## Multiple providers
+
+Several providers can be combined through the SDK `MultiProvider` using the `providers` key, with a configurable evaluation strategy (`first_match`, `first_successful`, `comparison`). See [Configuration reference](../configuration.md#multiple-providers).
+
 ## Writing a custom provider
 
 ```php
