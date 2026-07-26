@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The `API` service is now an isolated `OpenFeatureAPI` instance created by the container (SDK 2.3.0 isolated instances) instead of the `OpenFeatureAPI::getInstance()` global singleton. Provider, hooks, and evaluation context are no longer shared with other kernels running in the same PHP process.
+- `open-feature/sdk` requirement raised from `^2.2` to `^2.3` (the bundle relies on the public `OpenFeatureAPI` constructor introduced in SDK 2.3.0).
+
+### Upgrade notes
+
+- Run `composer update open-feature/sdk` if your lock file pins a version below 2.3.0.
+- Code calling `OpenFeatureAPI::getInstance()` directly now gets an instance distinct from the bundle's `API` service (different provider, hooks, and evaluation context). Inject the `API` or `Client` service instead.
+
 ## [0.3.0] - 2026-06-15
 
 ### Added
