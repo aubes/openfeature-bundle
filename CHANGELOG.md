@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `API` service is now an isolated `OpenFeatureAPI` instance created by the container (SDK 2.3.0 isolated instances) instead of the `OpenFeatureAPI::getInstance()` global singleton. Provider, hooks, and evaluation context are no longer shared with other kernels running in the same PHP process.
 - `open-feature/sdk` requirement raised from `^2.2` to `^2.3` (the bundle relies on the public `OpenFeatureAPI` constructor introduced in SDK 2.3.0).
 
+### Fixed
+
+- `flags` and `providers`: keys are now kept as declared. Dashes were converted to underscores (a flag declared as `new-checkout` could only be evaluated as `new_checkout`), and an object flag holding a `name` key was renamed after that value. The undocumented list form `flags: [{name: ..., value: ...}]` is no longer supported.
+
 ### Upgrade notes
 
 - Run `composer update open-feature/sdk` if your lock file pins a version below 2.3.0.

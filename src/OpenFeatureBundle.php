@@ -42,6 +42,7 @@ class OpenFeatureBundle extends AbstractBundle
                 ->arrayNode('providers')
                     ->info('Multiple providers combined through the SDK MultiProvider. Keys are provider names, values are service IDs. Evaluation follows declaration order.')
                     ->useAttributeAsKey('name')
+                    ->normalizeKeys(false)
                     ->scalarPrototype()->end()
                 ->end()
                 ->arrayNode('strategy')
@@ -64,7 +65,8 @@ class OpenFeatureBundle extends AbstractBundle
                 ->end()
                 ->arrayNode('flags')
                     ->info('Flag values for the built-in InMemoryProvider (local/dev use).')
-                    ->useAttributeAsKey('name')
+                    // No key attribute: it would re-key object flags holding that key
+                    ->normalizeKeys(false)
                     ->variablePrototype()->end()
                 ->end()
                 ->arrayNode('redis')
