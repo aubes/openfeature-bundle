@@ -24,9 +24,11 @@ A flag value must be resolved with the method matching its YAML type:
 
 | YAML value | Resolved via |
 |---|---|
-| `true` / `false` | `getBooleanValue()` (also readable as `getStringValue()`) |
-| `42` | `getIntegerValue()` or `getFloatValue()` (also readable as `getStringValue()`) |
+| `true` / `false` | `getBooleanValue()` |
+| `0` / `1` | `getBooleanValue()` (as `false` / `true`), `getIntegerValue()` or `getFloatValue()` |
+| `42` | `getIntegerValue()` or `getFloatValue()` |
+| `1.5` | `getFloatValue()` |
 | `"dark"` | `getStringValue()` |
-| `{color: blue}` | `getObjectValue()` |
+| `{color: blue}` or a list | `getObjectValue()` |
 
-Any other combination returns the default value with `ErrorCode::TYPE_MISMATCH`.
+Any other combination returns the default value with `ErrorCode::TYPE_MISMATCH`. No value is cast to string: read a boolean or numeric flag with its own method.
