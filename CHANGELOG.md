@@ -14,9 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnvVarProvider` and `RedisProvider` now return a `PARSE_ERROR` (and the default value) for raw values that do not match the requested type, instead of silently casting them (`"abc"` as integer used to resolve to `0`, `"banana"` as boolean to `false`).
 - `InMemoryProvider` returns a `TYPE_MISMATCH` instead of casting for integers other than `0`/`1` requested as boolean (e.g. `2` or `-1`, previously `true`), non-string values requested as string (e.g. `42`, previously `"42"`), and floats requested as integer (e.g. `1.5`, previously `1`).
 - `ResolutionDetailsTrait::toBool()` is replaced by `parseBool()`, `parseInt()`, `parseFloat()`, and `parseObject()`.
+- Provider services (`provider`, `providers`) must now declare their class, as Symfony already requires for services built by a factory. A provider created by a factory, or inheriting its class from a `parent` under an id that is not a class name, now fails at compile time without an explicit `class` option instead of skipping validation.
 
 ### Fixed
 
+- A provider service whose class does not exist now fails with an explicit "cannot be found" message instead of "must implement Provider", and a provider class whose parent class or interface is missing reports that missing class.
+- Providers now receive the application logger when MonologBundle is not installed; previously they got none. A logger already set on a provider service (e.g. a dedicated Monolog channel) is no longer overridden.
 - `flags` and `providers`: keys are now kept as declared. Dashes were converted to underscores (a flag declared as `new-checkout` could only be evaluated as `new_checkout`), and an object flag holding a `name` key was renamed after that value. The undocumented list form `flags: [{name: ..., value: ...}]` is no longer supported.
 - `RedisProvider` now logs Redis client failures at `error` level. Previously, an unavailable Redis silently resolved every flag to its default value, with nothing in the logs.
 
@@ -25,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Run `composer update open-feature/sdk` if your lock file pins a version below 2.3.0.
 - Code calling `OpenFeatureAPI::getInstance()` directly now gets an instance distinct from the bundle's `API` service (different provider, hooks, and evaluation context). Inject the `API` or `Client` service instead.
 - **Check your raw flag values.** `EnvVarProvider` and `RedisProvider` no longer cast unparsable values: a boolean flag set to anything other than `true`/`false`/`1`/`0`/`yes`/`no`/`on`/`off`/empty (e.g. `FEATURE_X=enabled`, previously `false`) or a numeric flag with a non-numeric value (for integers, decimal or exponent notation such as `10.0` or `1e3` too; leading zeros such as `08` are accepted) now resolves to the default value with a `PARSE_ERROR`. `InMemoryProvider` flags declared with a mismatching type (e.g. `max_items: 1.5` read as integer, `label: 42` read as string) now resolve to the default value with a `TYPE_MISMATCH`, like with typed providers such as flagd. In Twig, `{{ feature_value('max_items') }}` without a default reads the flag as a string and now renders `''`: pass a typed default (`feature_value('max_items', 10)`). These errors are not logged by the SDK: check the `open_feature` profiler panel in dev (error column), or register a hook that logs `ResolutionDetails::getError()` in `after()`.
+- **Provider services created by a factory, or defined through `parent` under an id that is not a class name,** must set the `class` option (e.g. `class: App\FeatureFlag\MyProvider` next to `factory:`; `OpenFeature\interfaces\provider\Provider` is accepted when the concrete class is unknown), otherwise the container fails to compile with `Class "" used for OpenFeature provider service "..." cannot be found`.
 - Custom providers using `ResolutionDetailsTrait::toBool()` must switch to `parseBool($flagKey, $raw, $defaultValue)`, which returns a `ResolutionDetails` instead of a `bool`.
 
 ## [0.3.0] - 2026-06-15
