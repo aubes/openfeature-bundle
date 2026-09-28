@@ -12,6 +12,7 @@ use OpenFeature\interfaces\flags\API;
 use OpenFeature\interfaces\provider\Provider;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
@@ -34,11 +35,7 @@ class SetProviderPass implements CompilerPassInterface
             return;
         }
 
-        $definition = $this->validateProvider($container, $providerId);
-
-        if ($container->has('logger')) {
-            $definition->addMethodCall('setLogger', [new Reference('logger')]);
-        }
+        $this->injectLogger($this->validateProvider($container, $providerId));
 
         $container->getDefinition(API::class)
             ->addMethodCall('setProvider', [new Reference($providerId)]);
@@ -49,15 +46,10 @@ class SetProviderPass implements CompilerPassInterface
      */
     private function registerMultiProvider(ContainerBuilder $container, array $providers): void
     {
-        $hasLogger = $container->has('logger');
         $providerData = [];
 
         foreach ($providers as $name => $providerId) {
-            $definition = $this->validateProvider($container, $providerId);
-
-            if ($hasLogger) {
-                $definition->addMethodCall('setLogger', [new Reference('logger')]);
-            }
+            $this->injectLogger($this->validateProvider($container, $providerId));
 
             $providerData[] = ['name' => (string) $name, 'provider' => new Reference($providerId)];
         }
@@ -72,22 +64,36 @@ class SetProviderPass implements CompilerPassInterface
         };
 
         $definition = new Definition(MultiProvider::class, [$providerData, $strategyDefinition]);
-
-        if ($hasLogger) {
-            $definition->addMethodCall('setLogger', [new Reference('logger')]);
-        }
+        $this->injectLogger($definition);
 
         $container->getDefinition(API::class)
             ->addMethodCall('setProvider', [$definition]);
     }
 
+    private function injectLogger(Definition $definition): void
+    {
+        // Keeps a logger already set on the service (explicit call or LoggerAwareInterface autoconfiguration)
+        if ($definition->hasMethodCall('setLogger')) {
+            return;
+        }
+
+        // Optional: without MonologBundle, FrameworkBundle's LoggerPass registers the default logger after this pass
+        $definition->addMethodCall('setLogger', [new Reference('logger', ContainerInterface::IGNORE_ON_INVALID_REFERENCE)]);
+    }
+
     private function validateProvider(ContainerBuilder $container, string $providerId): Definition
     {
         $definition = $container->findDefinition($providerId);
-        $class = $definition->getClass();
+        /** @var null|string $class */
+        $class = $container->getParameterBag()->resolveValue($definition->getClass());
 
-        if ($class !== null && !\is_subclass_of($class, Provider::class)) {
-            throw new \InvalidArgumentException(\sprintf('The service "%s" (class "%s") configured as OpenFeature provider must implement "%s".', $providerId, $class, Provider::class));
+        // Runs before parent resolution, like the core voter and env var processor passes: the class must be set on the service itself
+        if (!$reflection = $container->getReflectionClass($class)) {
+            throw new \InvalidArgumentException(\sprintf('Class "%s" used for OpenFeature provider service "%s" cannot be found. Set the "class" option on the service, including when it is created by a factory or inherits from a parent.', $class, $providerId));
+        }
+
+        if (!$reflection->implementsInterface(Provider::class)) {
+            throw new \InvalidArgumentException(\sprintf('OpenFeature provider service "%s" (class "%s") must implement interface "%s".', $providerId, $reflection->getName(), Provider::class));
         }
 
         return $definition;

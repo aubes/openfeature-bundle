@@ -7,3 +7,6 @@ parameters:
     paths:
         - src
         - tests
+    excludePaths:
+        # Extends a missing class on purpose (SetProviderPass error reporting test)
+        - tests/Fixtures/ProviderWithMissingParent.php
