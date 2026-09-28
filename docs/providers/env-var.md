@@ -33,8 +33,14 @@ FEATURE_MAX_ITEMS=10
 FEATURE_CONFIG='{"color":"blue"}'
 ```
 
-Boolean truthy values: `true`, `1`, `yes`, `on`.
+| Requested type | Accepted raw values |
+|---|---|
+| boolean | `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off` (case-insensitive), empty string (`false`) |
+| integer | whole numbers with an optional sign; leading zeros allowed (`08`), no decimal or exponent notation (`10.0`, `1e3`) |
+| float | any numeric notation (`3.14`, `08`, `1e3`) |
+| string | any value |
+| object | a JSON object or array |
 
-Object values must be JSON-encoded. Invalid JSON returns the default value with `ErrorCode::PARSE_ERROR`.
+Any other raw value returns the default value with `ErrorCode::PARSE_ERROR` (e.g. `FEATURE_X=enabled` read as boolean).
 
 If the environment variable is not set, the provider returns the default value with `ErrorCode::FLAG_NOT_FOUND`.

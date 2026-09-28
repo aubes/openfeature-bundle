@@ -46,10 +46,18 @@ feature:config        ->  '{"color":"blue"}'
 
 ## Values
 
-Boolean truthy values: `true`, `1`, `yes`, `on`.
+| Requested type | Accepted raw values |
+|---|---|
+| boolean | `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off` (case-insensitive), empty string (`false`) |
+| integer | whole numbers with an optional sign; leading zeros allowed (`08`), no decimal or exponent notation (`10.0`, `1e3`) |
+| float | any numeric notation (`3.14`, `08`, `1e3`) |
+| string | any value |
+| object | a JSON object or array |
 
-Object values must be JSON-encoded. Invalid JSON returns the default value with `ErrorCode::PARSE_ERROR`.
+Any other raw value returns the default value with `ErrorCode::PARSE_ERROR` (e.g. `"enabled"` read as boolean).
 
 ## Error handling
 
 If Redis is unavailable, the provider returns the default value with an error reason (`ErrorCode::GENERAL`) instead of throwing an exception. This makes it safe to use in production without risking a full outage if Redis goes down.
+
+Each failure is logged at `error` level with the exception, so an outage shows up in your logs. During an outage, this means one log entry per flag evaluation: use Monolog's `fingers_crossed` or deduplication handlers if the volume is a concern.

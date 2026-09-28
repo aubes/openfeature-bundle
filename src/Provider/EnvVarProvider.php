@@ -6,7 +6,6 @@ namespace Aubes\OpenFeatureBundle\Provider;
 
 use OpenFeature\implementation\provider\AbstractProvider;
 use OpenFeature\interfaces\flags\EvaluationContext;
-use OpenFeature\interfaces\provider\ErrorCode;
 use OpenFeature\interfaces\provider\Provider;
 use OpenFeature\interfaces\provider\ResolutionDetails;
 
@@ -32,7 +31,7 @@ class EnvVarProvider extends AbstractProvider implements Provider
             return $this->flagNotFound($flagKey, $defaultValue);
         }
 
-        return $this->found($this->toBool($raw));
+        return $this->parseBool($flagKey, $raw, $defaultValue);
     }
 
     public function resolveStringValue(string $flagKey, string $defaultValue, ?EvaluationContext $context = null): ResolutionDetails
@@ -54,7 +53,7 @@ class EnvVarProvider extends AbstractProvider implements Provider
             return $this->flagNotFound($flagKey, $defaultValue);
         }
 
-        return $this->found((int) $raw);
+        return $this->parseInt($flagKey, $raw, $defaultValue);
     }
 
     public function resolveFloatValue(string $flagKey, float $defaultValue, ?EvaluationContext $context = null): ResolutionDetails
@@ -65,7 +64,7 @@ class EnvVarProvider extends AbstractProvider implements Provider
             return $this->flagNotFound($flagKey, $defaultValue);
         }
 
-        return $this->found((float) $raw);
+        return $this->parseFloat($flagKey, $raw, $defaultValue);
     }
 
     /**
@@ -79,13 +78,7 @@ class EnvVarProvider extends AbstractProvider implements Provider
             return $this->flagNotFound($flagKey, $defaultValue);
         }
 
-        $decoded = \json_decode($raw, true);
-
-        if (!\is_array($decoded)) {
-            return $this->error(ErrorCode::PARSE_ERROR(), \sprintf('Flag "%s" contains invalid JSON', $flagKey), $defaultValue);
-        }
-
-        return $this->found($decoded);
+        return $this->parseObject($flagKey, $raw, $defaultValue);
     }
 
     private function getEnvVar(string $flagKey): ?string

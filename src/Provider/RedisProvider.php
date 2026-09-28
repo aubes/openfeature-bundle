@@ -27,62 +27,22 @@ class RedisProvider extends AbstractProvider implements Provider
 
     public function resolveBooleanValue(string $flagKey, bool $defaultValue, ?EvaluationContext $context = null): ResolutionDetails
     {
-        try {
-            $raw = $this->getRaw($flagKey);
-        } catch (\RuntimeException $e) {
-            return $this->error(ErrorCode::GENERAL(), \sprintf('Flag "%s": %s', $flagKey, $e->getMessage()), $defaultValue);
-        }
-
-        if ($raw === null) {
-            return $this->flagNotFound($flagKey, $defaultValue);
-        }
-
-        return $this->found($this->toBool($raw));
+        return $this->resolveRaw($flagKey, $defaultValue, fn (string $raw) => $this->parseBool($flagKey, $raw, $defaultValue));
     }
 
     public function resolveStringValue(string $flagKey, string $defaultValue, ?EvaluationContext $context = null): ResolutionDetails
     {
-        try {
-            $raw = $this->getRaw($flagKey);
-        } catch (\RuntimeException $e) {
-            return $this->error(ErrorCode::GENERAL(), \sprintf('Flag "%s": %s', $flagKey, $e->getMessage()), $defaultValue);
-        }
-
-        if ($raw === null) {
-            return $this->flagNotFound($flagKey, $defaultValue);
-        }
-
-        return $this->found($raw);
+        return $this->resolveRaw($flagKey, $defaultValue, fn (string $raw) => $this->found($raw));
     }
 
     public function resolveIntegerValue(string $flagKey, int $defaultValue, ?EvaluationContext $context = null): ResolutionDetails
     {
-        try {
-            $raw = $this->getRaw($flagKey);
-        } catch (\RuntimeException $e) {
-            return $this->error(ErrorCode::GENERAL(), \sprintf('Flag "%s": %s', $flagKey, $e->getMessage()), $defaultValue);
-        }
-
-        if ($raw === null) {
-            return $this->flagNotFound($flagKey, $defaultValue);
-        }
-
-        return $this->found((int) $raw);
+        return $this->resolveRaw($flagKey, $defaultValue, fn (string $raw) => $this->parseInt($flagKey, $raw, $defaultValue));
     }
 
     public function resolveFloatValue(string $flagKey, float $defaultValue, ?EvaluationContext $context = null): ResolutionDetails
     {
-        try {
-            $raw = $this->getRaw($flagKey);
-        } catch (\RuntimeException $e) {
-            return $this->error(ErrorCode::GENERAL(), \sprintf('Flag "%s": %s', $flagKey, $e->getMessage()), $defaultValue);
-        }
-
-        if ($raw === null) {
-            return $this->flagNotFound($flagKey, $defaultValue);
-        }
-
-        return $this->found((float) $raw);
+        return $this->resolveRaw($flagKey, $defaultValue, fn (string $raw) => $this->parseFloat($flagKey, $raw, $defaultValue));
     }
 
     /**
@@ -90,33 +50,32 @@ class RedisProvider extends AbstractProvider implements Provider
      */
     public function resolveObjectValue(string $flagKey, array $defaultValue, ?EvaluationContext $context = null): ResolutionDetails
     {
+        return $this->resolveRaw($flagKey, $defaultValue, fn (string $raw) => $this->parseObject($flagKey, $raw, $defaultValue));
+    }
+
+    /**
+     * @param bool|float|int|mixed[]|string       $defaultValue
+     * @param \Closure(string): ResolutionDetails $parse
+     */
+    private function resolveRaw(string $flagKey, bool|string|int|float|array $defaultValue, \Closure $parse): ResolutionDetails
+    {
         try {
-            $raw = $this->getRaw($flagKey);
-        } catch (\RuntimeException $e) {
+            $raw = $this->client->get($this->prefix . $flagKey);
+        } catch (\Throwable $e) {
+            // The SDK does not log errors returned in ResolutionDetails
+            $this->logger?->error('OpenFeature Redis provider failed to read flag "{flag}": {message}', [
+                'flag' => $flagKey,
+                'message' => $e->getMessage(),
+                'exception' => $e,
+            ]);
+
             return $this->error(ErrorCode::GENERAL(), \sprintf('Flag "%s": %s', $flagKey, $e->getMessage()), $defaultValue);
         }
 
-        if ($raw === null) {
+        if ($raw === false || $raw === null) {
             return $this->flagNotFound($flagKey, $defaultValue);
         }
 
-        $decoded = \json_decode($raw, true);
-
-        if (!\is_array($decoded)) {
-            return $this->error(ErrorCode::PARSE_ERROR(), \sprintf('Flag "%s" contains invalid JSON', $flagKey), $defaultValue);
-        }
-
-        return $this->found($decoded);
-    }
-
-    private function getRaw(string $flagKey): ?string
-    {
-        try {
-            $value = $this->client->get($this->prefix . $flagKey);
-        } catch (\Throwable $e) {
-            throw new \RuntimeException($e->getMessage(), previous: $e);
-        }
-
-        return ($value === false || $value === null) ? null : $value;
+        return $parse($raw);
     }
 }

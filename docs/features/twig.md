@@ -30,4 +30,6 @@ The SDK method is dispatched based on the type of the default value:
 | `float` | `getFloatValue()` |
 | `array` | `getObjectValue()` |
 
+Always pass a default of the flag's type. Without a default, the flag is read as a string: a boolean or integer flag then resolves to `''` with a `TYPE_MISMATCH` error, as typed providers such as flagd do.
+
 > **Note:** The Twig extension is only registered when `twig/twig` is available in the project.

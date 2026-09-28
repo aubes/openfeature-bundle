@@ -29,7 +29,8 @@ class InMemoryProvider extends AbstractProvider implements Provider
 
         $value = $this->flags[$flagKey];
 
-        if (!\is_bool($value) && !\is_int($value)) {
+        // 0/1 accepted for YAML convenience; other integers are ambiguous
+        if (!\is_bool($value) && $value !== 0 && $value !== 1) {
             return $this->error(ErrorCode::TYPE_MISMATCH(), \sprintf('Flag "%s" is not of type boolean', $flagKey), $defaultValue);
         }
 
@@ -44,11 +45,11 @@ class InMemoryProvider extends AbstractProvider implements Provider
 
         $value = $this->flags[$flagKey];
 
-        if (!\is_scalar($value)) {
+        if (!\is_string($value)) {
             return $this->error(ErrorCode::TYPE_MISMATCH(), \sprintf('Flag "%s" is not of type string', $flagKey), $defaultValue);
         }
 
-        return $this->found((string) $value);
+        return $this->found($value);
     }
 
     public function resolveIntegerValue(string $flagKey, int $defaultValue, ?EvaluationContext $context = null): ResolutionDetails
@@ -59,11 +60,11 @@ class InMemoryProvider extends AbstractProvider implements Provider
 
         $value = $this->flags[$flagKey];
 
-        if (!\is_int($value) && !\is_float($value)) {
+        if (!\is_int($value)) {
             return $this->error(ErrorCode::TYPE_MISMATCH(), \sprintf('Flag "%s" is not of type integer', $flagKey), $defaultValue);
         }
 
-        return $this->found((int) $value);
+        return $this->found($value);
     }
 
     public function resolveFloatValue(string $flagKey, float $defaultValue, ?EvaluationContext $context = null): ResolutionDetails
