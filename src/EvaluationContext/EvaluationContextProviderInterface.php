@@ -9,7 +9,12 @@ use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Implement this interface to contribute attributes to the global OpenFeature
- * EvaluationContext on each request.
+ * EvaluationContext of each request.
+ *
+ * Providers run on the first flag evaluation of the request, not on kernel.request:
+ * a request that evaluates no flag never calls them. An exception thrown by a provider
+ * is logged and the provider skipped. A flag evaluated from inside getContext() gets
+ * an empty context.
  *
  * Multiple providers are supported. They are iterated highest priority first
  * (set the "priority" attribute on the tag), then their contexts are merged by the

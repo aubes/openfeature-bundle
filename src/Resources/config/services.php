@@ -37,6 +37,7 @@ return static function (ContainerConfigurator $container): void {
             service(API::class),
             tagged_iterator('openfeature.evaluation_context_provider'),
             service('event_dispatcher')->nullOnInvalid(),
+            service('logger')->nullOnInvalid(),
         ])
         ->tag('kernel.event_listener', ['event' => 'kernel.request', 'method' => 'onKernelRequest', 'priority' => 4])
         ->tag('kernel.reset', ['method' => 'reset']);
