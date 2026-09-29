@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Aubes\OpenFeatureBundle\Profiler;
 
+use Aubes\OpenFeatureBundle\EvaluationContext\LazyEvaluationContext;
 use OpenFeature\interfaces\flags\API;
+use OpenFeature\interfaces\flags\EvaluationContext;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
@@ -26,12 +28,17 @@ class OpenFeatureDataCollector extends DataCollector
 
     public function collect(Request $request, Response $response, ?\Throwable $exception = null): void
     {
+        $context = $this->api->getEvaluationContext();
+        // Reading an unresolved lazy context would run the context providers on every profiled request
+        $resolved = !$context instanceof LazyEvaluationContext || $context->isResolved();
+
         $this->data = [
             'evaluations' => $this->hook->getEvaluations(),
             'provider' => $this->api->getProviderMetadata()->getName(),
             'providers' => $this->providers,
             'strategy' => $this->providers === [] ? null : $this->strategy,
-            'evaluation_context' => $this->serializeContext(),
+            'evaluation_context' => $resolved ? $this->serializeContext($context) : [],
+            'evaluation_context_resolved' => $resolved,
             'hooks' => $this->collectHooks(),
             'context_providers' => $this->collectContextProviders(),
         ];
@@ -86,6 +93,14 @@ class OpenFeatureDataCollector extends DataCollector
         return $context;
     }
 
+    public function isEvaluationContextResolved(): bool
+    {
+        /** @var bool $resolved */
+        $resolved = $this->data['evaluation_context_resolved'] ?? true;
+
+        return $resolved;
+    }
+
     /** @return list<class-string> */
     public function getHooks(): array
     {
@@ -124,10 +139,8 @@ class OpenFeatureDataCollector extends DataCollector
     }
 
     /** @return array<string, mixed> */
-    private function serializeContext(): array
+    private function serializeContext(?EvaluationContext $context): array
     {
-        $context = $this->api->getEvaluationContext();
-
         if ($context === null) {
             return [];
         }

@@ -11,13 +11,13 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 
 class UserEvaluationContextProvider implements EvaluationContextProviderInterface
 {
-    public function __construct(private readonly TokenStorageInterface $tokenStorage)
+    public function __construct(private readonly ?TokenStorageInterface $tokenStorage)
     {
     }
 
     public function getContext(Request $request): ?EvaluationContext
     {
-        $token = $this->tokenStorage->getToken();
+        $token = $this->tokenStorage?->getToken();
 
         if ($token === null) {
             return null;
