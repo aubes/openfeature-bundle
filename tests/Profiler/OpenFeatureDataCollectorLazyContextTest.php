@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\VarDumper\Cloner\Data;
 
 #[CoversClass(OpenFeatureDataCollector::class)]
 class OpenFeatureDataCollectorLazyContextTest extends TestCase
@@ -41,10 +42,13 @@ class OpenFeatureDataCollectorLazyContextTest extends TestCase
         $collector = $this->collect($api);
 
         $this->assertTrue($collector->isEvaluationContextResolved());
-        $this->assertSame([
-            'targeting_key' => \substr(\hash('sha256', 'user-1'), 0, 12),
-            'attributes' => ['plan' => 'premium'],
-        ], $collector->getEvaluationContext());
+
+        $context = $collector->getEvaluationContext();
+        $this->assertSame(\substr(\hash('sha256', 'user-1'), 0, 12), $context['targeting_key']);
+        $this->assertIsArray($context['attributes']);
+        $plan = $context['attributes']['plan'] ?? null;
+        $this->assertInstanceOf(Data::class, $plan);
+        $this->assertSame('premium', $plan->getValue());
     }
 
     public function testRegularContextIsReportedAsResolved(): void
