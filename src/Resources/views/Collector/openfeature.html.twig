@@ -115,7 +115,7 @@
                 {% for key, value in collector.evaluationContext.attributes ?? {} %}
                     <tr>
                         <td><code>{{ key }}</code></td>
-                        <td>{{ value }}</td>
+                        <td>{{ profiler_dump(value) }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -150,9 +150,7 @@
                             {% if contribution.attributes is empty %}
                                 -
                             {% else %}
-                                {% for key, value in contribution.attributes %}
-                                    <code>{{ key }}</code>: {{ value }}{{ not loop.last ? ', ' : '' }}
-                                {% endfor %}
+                                {{ profiler_dump(contribution.attributes) }}
                             {% endif %}
                         </td>
                     </tr>
@@ -213,7 +211,7 @@
                             {% elseif eval.value is same as false %}
                                 <span class="label status-warning">false</span>
                             {% else %}
-                                {{ eval.value|e }}
+                                {{ profiler_dump(eval.value) }}
                             {% endif %}
                         </td>
                         <td>{{ eval.variant ?? '-' }}</td>
