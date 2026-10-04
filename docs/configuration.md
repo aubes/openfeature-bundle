@@ -7,17 +7,17 @@ Full configuration tree for `open_feature`:
 open_feature:
 
     # Service ID of the OpenFeature provider
-    # Default: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
+    # Default: none (the InMemoryProvider is used when neither "provider" nor "providers" is set)
     # Mutually exclusive with "providers"
-    provider: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
+    provider: ~
 
     # Multiple providers combined through the SDK MultiProvider
     # Keys are provider names, values are service IDs
     # Evaluation follows declaration order
     # Mutually exclusive with "provider"
-    providers:
-        remote: App\OpenFeature\MyProvider
-        local: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
+    providers: {}
+    #   remote: App\OpenFeature\MyProvider
+    #   local: Aubes\OpenFeatureBundle\Provider\InMemoryProvider
 
     # Evaluation strategy for the MultiProvider (only when using "providers")
     # Shorthand: strategy: first_match
@@ -35,15 +35,15 @@ open_feature:
 
     # EvaluationContext settings
     evaluation_context:
-        # Populate targeting key from the authenticated Symfony user
-        # auto: enabled if symfony/security-core is installed
-        # true: always enabled (requires symfony/security-core)
-        # false: disabled
-        user_provider: auto   # auto | true | false
+        # Populate targeting key from the authenticated Symfony user (sent to the flag provider)
+        # false: disabled (default)
+        # auto: enabled if SecurityBundle is enabled
+        # true: always enabled (requires SecurityBundle)
+        user_provider: false  # false | auto | true
 
     # Exception behavior for #[FeatureGate]
     feature_flag:
-        # auto: AccessDeniedException if security-core is available, HttpException otherwise
+        # auto: AccessDeniedException if SecurityBundle is enabled, HttpException otherwise
         # access_denied: always throw AccessDeniedException
         # http_exception: always throw HttpException
         on_disabled: auto     # auto | access_denied | http_exception
@@ -52,11 +52,11 @@ open_feature:
         status_code: 403
 
     # Redis provider settings (only when using RedisProvider)
-    redis:
-        # Service implementing RedisClientInterface
-        client: ~
-        # Key prefix for flag lookup
-        prefix: 'feature:'
+    # redis:
+    #     # Service implementing RedisClientInterface (required)
+    #     client: App\OpenFeature\MyRedisClient
+    #     # Key prefix for flag lookup
+    #     prefix: 'feature:'
 ```
 
 ## Provider
@@ -72,7 +72,7 @@ See [Providers](providers/index.md) for available options.
 
 ## Multiple providers
 
-Declare several providers under `providers` to combine them through the SDK `MultiProvider` (requires `open-feature/sdk` >= 2.2). Each key is a provider name, each value a service ID. Providers are evaluated in declaration order:
+Declare several providers under `providers` to combine them through the SDK `MultiProvider`. Each key is a provider name, each value a service ID. Providers are evaluated in declaration order:
 
 ```yaml
 open_feature:
@@ -126,6 +126,6 @@ The `feature_flag.on_disabled` setting controls what happens when a `#[FeatureGa
 
 | Value | Exception type | When to use |
 |---|---|---|
-| `auto` (default) | `AccessDeniedException` if `symfony/security-core` is installed, `HttpException` otherwise | Most apps |
+| `auto` (default) | `AccessDeniedException` if SecurityBundle is enabled, `HttpException` otherwise | Most apps |
 | `access_denied` | `AccessDeniedException` | When you have a security error handler |
 | `http_exception` | `HttpException` with configurable status code | APIs, custom error pages |

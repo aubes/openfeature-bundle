@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Aubes\OpenFeatureBundle\Profiler;
 
+use Aubes\OpenFeatureBundle\EvaluationContext\LazyEvaluationContext;
 use OpenFeature\interfaces\flags\API;
+use OpenFeature\interfaces\flags\EvaluationContext;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
+use Symfony\Component\VarDumper\Cloner\Data;
 
 class OpenFeatureDataCollector extends DataCollector
 {
@@ -26,12 +29,17 @@ class OpenFeatureDataCollector extends DataCollector
 
     public function collect(Request $request, Response $response, ?\Throwable $exception = null): void
     {
+        $context = $this->api->getEvaluationContext();
+        // Reading an unresolved lazy context would run the context providers on every profiled request
+        $resolved = !$context instanceof LazyEvaluationContext || $context->isResolved();
+
         $this->data = [
-            'evaluations' => $this->hook->getEvaluations(),
+            'evaluations' => $this->collectEvaluations(),
             'provider' => $this->api->getProviderMetadata()->getName(),
             'providers' => $this->providers,
             'strategy' => $this->providers === [] ? null : $this->strategy,
-            'evaluation_context' => $this->serializeContext(),
+            'evaluation_context' => $resolved ? $this->serializeContext($context) : [],
+            'evaluation_context_resolved' => $resolved,
             'hooks' => $this->collectHooks(),
             'context_providers' => $this->collectContextProviders(),
         ];
@@ -86,6 +94,14 @@ class OpenFeatureDataCollector extends DataCollector
         return $context;
     }
 
+    public function isEvaluationContextResolved(): bool
+    {
+        /** @var bool $resolved */
+        $resolved = $this->data['evaluation_context_resolved'] ?? true;
+
+        return $resolved;
+    }
+
     /** @return list<class-string> */
     public function getHooks(): array
     {
@@ -95,10 +111,10 @@ class OpenFeatureDataCollector extends DataCollector
         return $hooks;
     }
 
-    /** @return list<array{provider: class-string, targeting_key: ?string, attributes: array<array-key, mixed>}> */
+    /** @return list<array{provider: class-string, targeting_key: ?string, attributes: Data}> */
     public function getContextProviders(): array
     {
-        /** @var list<array{provider: class-string, targeting_key: ?string, attributes: array<array-key, mixed>}> $providers */
+        /** @var list<array{provider: class-string, targeting_key: ?string, attributes: Data}> $providers */
         $providers = $this->data['context_providers'] ?? [];
 
         return $providers;
@@ -124,18 +140,28 @@ class OpenFeatureDataCollector extends DataCollector
     }
 
     /** @return array<string, mixed> */
-    private function serializeContext(): array
+    private function serializeContext(?EvaluationContext $context): array
     {
-        $context = $this->api->getEvaluationContext();
-
         if ($context === null) {
             return [];
         }
 
         return [
             'targeting_key' => $this->anonymizeTargetingKey($context->getTargetingKey()),
-            'attributes' => $context->getAttributes()->toArray(),
+            'attributes' => \array_map($this->cloneVar(...), $context->getAttributes()->toArray()),
         ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function collectEvaluations(): array
+    {
+        return \array_map(
+            // Booleans stay raw for the true/false badges; other values (arrays, dates) go through VarDumper
+            fn (array $evaluation): array => \array_replace($evaluation, [
+                'value' => \is_bool($evaluation['value']) ? $evaluation['value'] : $this->cloneVar($evaluation['value']),
+            ]),
+            $this->hook->getEvaluations(),
+        );
     }
 
     /** @return list<class-string> */
@@ -153,7 +179,7 @@ class OpenFeatureDataCollector extends DataCollector
         return $hooks;
     }
 
-    /** @return list<array{provider: class-string, targeting_key: ?string, attributes: array<array-key, mixed>}> */
+    /** @return list<array{provider: class-string, targeting_key: ?string, attributes: Data}> */
     private function collectContextProviders(): array
     {
         if ($this->recorder === null) {
@@ -164,7 +190,7 @@ class OpenFeatureDataCollector extends DataCollector
             fn (array $c): array => [
                 'provider' => $c['provider'],
                 'targeting_key' => $this->anonymizeTargetingKey($c['targeting_key']),
-                'attributes' => $c['attributes'],
+                'attributes' => $this->cloneVar($c['attributes']),
             ],
             $this->recorder->getContributions(),
         );

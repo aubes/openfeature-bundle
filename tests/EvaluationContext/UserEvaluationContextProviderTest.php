@@ -15,6 +15,13 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[CoversClass(UserEvaluationContextProvider::class)]
 class UserEvaluationContextProviderTest extends TestCase
 {
+    public function testReturnsNullWithoutTokenStorage(): void
+    {
+        $provider = new UserEvaluationContextProvider(null);
+
+        $this->assertNull($provider->getContext(Request::create('/')));
+    }
+
     public function testReturnsNullWhenNoToken(): void
     {
         $tokenStorage = $this->createStub(TokenStorageInterface::class);
