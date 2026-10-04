@@ -35,11 +35,11 @@ open_feature:
 
     # EvaluationContext settings
     evaluation_context:
-        # Populate targeting key from the authenticated Symfony user
+        # Populate targeting key from the authenticated Symfony user (sent to the flag provider)
+        # false: disabled (default)
         # auto: enabled if SecurityBundle is enabled
         # true: always enabled (requires SecurityBundle)
-        # false: disabled
-        user_provider: auto   # auto | true | false
+        user_provider: false  # false | auto | true
 
     # Exception behavior for #[FeatureGate]
     feature_flag:

@@ -25,7 +25,7 @@ class ConfigurationTest extends TestCase
             'providers' => [],
             'strategy' => ['type' => 'first_match', 'fallback' => null],
             'flags' => [],
-            'evaluation_context' => ['user_provider' => 'auto'],
+            'evaluation_context' => ['user_provider' => 'false'],
             'feature_flag' => ['on_disabled' => 'auto', 'status_code' => 403],
         ], $this->process([]));
     }

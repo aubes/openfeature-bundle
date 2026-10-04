@@ -4,21 +4,21 @@ The `EvaluationContext` carries targeting information (user ID, attributes) used
 
 ## Auto-populate from the Symfony user
 
-When SecurityBundle is enabled, the authenticated user's identifier is automatically set as the `targeting_key`:
+Enable `user_provider` to set the authenticated user's identifier as the `targeting_key`:
 
 ```yaml
 open_feature:
     evaluation_context:
-        user_provider: true  # or "auto" (default)
+        user_provider: auto  # or true
 ```
 
 | Value | Behavior |
 |---|---|
-| `auto` (default) | Enabled if SecurityBundle is enabled |
+| `false` (default) | Disabled |
+| `auto` | Enabled if SecurityBundle is enabled |
 | `true` | Always enabled (requires SecurityBundle) |
-| `false` | Disabled |
 
-> **Note:** The user identifier is sent as-is to the flag provider, which may be a remote service (flagd, GO Feature Flag relay proxy, LaunchDarkly). If it is personal data, such as an email address, set `user_provider: false` and register a [custom context provider](#custom-context-provider) that sets a non-personal targeting key (internal user ID, hash). The profiler only displays a hash of the targeting key.
+> **Note:** The user identifier is sent as-is to the flag provider, which may be a remote service (flagd, GO Feature Flag relay proxy, LaunchDarkly). This is why `user_provider` is disabled by default. If the identifier is personal data, such as an email address, keep it disabled and register a [custom context provider](#custom-context-provider) that sets a non-personal targeting key (internal user ID, hash). The profiler only displays a hash of the targeting key.
 
 ## Custom context provider
 
