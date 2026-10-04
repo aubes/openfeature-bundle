@@ -24,15 +24,15 @@ public function __construct(private readonly Client $client) {}
 
 ### If you configure the bundle
 
-**`evaluation_context.user_provider: auto` now takes effect.** It used to resolve to `false` in every application. With SecurityBundle enabled, the identifier of the authenticated user now becomes the targeting key, and it is sent to your flag provider. To keep the previous behavior, disable it:
+**`evaluation_context.user_provider` defaults to `false`.** The previous default, `auto`, always resolved to `false` because of a bug, so nothing changes by default. If you set `auto` or `true` explicitly, it now works: with SecurityBundle enabled, the identifier of the authenticated user becomes the targeting key, and it is sent to your flag provider. To enable it:
 
 ```yaml
 open_feature:
     evaluation_context:
-        user_provider: false
+        user_provider: auto
 ```
 
-If the user identifier is personal data (an email address, for example), read the note in [Evaluation context][evaluation-context].
+If the user identifier is personal data (an email address, for example), read the note in [Evaluation context][evaluation-context] first.
 
 **`feature_flag.on_disabled: auto` depends on SecurityBundle.** It picks `access_denied` only when SecurityBundle is enabled, and `http_exception` otherwise. Only an application with `symfony/security-core` installed but no SecurityBundle is affected: a closed `#[FeatureGate]` now returns a 403 instead of a 500. To keep throwing an `AccessDeniedException`, set it explicitly:
 

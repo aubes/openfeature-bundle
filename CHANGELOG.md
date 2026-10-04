@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Evaluation context providers now run on the first flag evaluation of the request instead of on `kernel.request`. A request that evaluates no flag no longer reads the security token, so a `lazy` firewall stays lazy and the response stays HTTP-cacheable. `EvaluationContextContributedEvent` is dispatched at that time.
 - An exception thrown by an evaluation context provider, or by a listener of `EvaluationContextContributedEvent`, is now logged instead of failing the request (the failing provider is skipped).
 - Provider services (`provider`, `providers`) must now declare their class, as Symfony already requires for services built by a factory. A provider created by a factory, or inheriting its class from a `parent` under an id that is not a class name, now fails at compile time without an explicit `class` option instead of skipping validation.
+- `evaluation_context.user_provider` now defaults to `false` instead of `auto`: the user identifier is only sent to the flag provider when explicitly enabled. Since `auto` always resolved to `false` in 0.3, the effective default does not change.
 
 ### Fixed
 
@@ -36,7 +37,7 @@ See [UPGRADE.md][upgrade-0.4] for details and examples.
 - Inject the `API` or `Client` service instead of calling `OpenFeatureAPI::getInstance()`.
 - Check the raw values of `EnvVarProvider` and `RedisProvider` flags and the types of `InMemoryProvider` flags: a mismatch now resolves to the default value with an error. In Twig, pass a typed default to `feature_value()`.
 - Set the `class` option on provider services created by a factory or defined through `parent`.
-- `user_provider: auto` now takes effect with SecurityBundle: set it to `false` to keep the previous behavior.
+- `user_provider` now defaults to `false`, as it effectively was in 0.3. An explicit `auto` now takes effect with SecurityBundle, and `true` no longer fails.
 - Move logic that must run on every request out of evaluation context providers, which now run on the first flag evaluation. `API::getEvaluationContext()` no longer returns a `MutableEvaluationContext`.
 - Replace `ResolutionDetailsTrait::toBool()` with `parseBool()`.
 

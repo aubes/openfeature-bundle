@@ -175,9 +175,17 @@ class OpenFeatureBundleTest extends TestCase
         $this->assertSame(404, $container->getParameter('open_feature.feature_flag.status_code'));
     }
 
-    public function testUserProviderAutoEnabledWithSecurityBundle(): void
+    public function testUserProviderDisabledByDefault(): void
     {
         $container = $this->createContainer(bundles: self::SECURITY_BUNDLE);
+
+        $this->assertSame('false', $container->getParameter('open_feature.evaluation_context.user_provider'));
+        $this->assertFalse($container->hasDefinition(UserEvaluationContextProvider::class));
+    }
+
+    public function testUserProviderAutoEnabledWithSecurityBundle(): void
+    {
+        $container = $this->createContainer(['evaluation_context' => ['user_provider' => 'auto']], bundles: self::SECURITY_BUNDLE);
 
         $this->assertSame('true', $container->getParameter('open_feature.evaluation_context.user_provider'));
 
@@ -189,7 +197,7 @@ class OpenFeatureBundleTest extends TestCase
     public function testUserProviderToleratesSecurityBundleWithoutTokenStorage(): void
     {
         // Symfony 6.4 registers no security service when SecurityBundle is enabled but not configured
-        $container = $this->createContainer(bundles: self::SECURITY_BUNDLE);
+        $container = $this->createContainer(['evaluation_context' => ['user_provider' => 'auto']], bundles: self::SECURITY_BUNDLE);
         (new CheckExceptionOnInvalidReferenceBehaviorPass())->process($container);
 
         $provider = $container->get(UserEvaluationContextProvider::class);
@@ -199,7 +207,7 @@ class OpenFeatureBundleTest extends TestCase
 
     public function testUserProviderAutoDisabledWithoutSecurityBundle(): void
     {
-        $container = $this->createContainer();
+        $container = $this->createContainer(['evaluation_context' => ['user_provider' => 'auto']]);
 
         $this->assertSame('false', $container->getParameter('open_feature.evaluation_context.user_provider'));
         $this->assertFalse($container->hasDefinition(UserEvaluationContextProvider::class));
