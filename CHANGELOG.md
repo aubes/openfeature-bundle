@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `feature_flag.on_disabled: auto` now picks `access_denied` only when SecurityBundle is enabled. With `symfony/security-core` installed but no SecurityBundle (e.g. pulled by `symfony/security-csrf`), a disabled feature gate returned a 500 instead of a 403. Set `on_disabled: access_denied` explicitly to keep the previous exception.
 - A provider service whose class does not exist now fails with an explicit "cannot be found" message instead of "must implement Provider", and a provider class whose parent class or interface is missing reports that missing class.
 - Providers now receive the application logger when MonologBundle is not installed; previously they got none. A logger already set on a provider service (e.g. a dedicated Monolog channel) is no longer overridden.
+- Errors caught by the SDK during a flag evaluation (an exception thrown by a provider or a hook, or a resolved value of the wrong type) are now logged at `error` level. The `API` service had no logger, so these evaluations silently resolved to the default value.
 - `flags` and `providers`: keys are now kept as declared. Dashes were converted to underscores (a flag declared as `new-checkout` could only be evaluated as `new_checkout`), and an object flag holding a `name` key was renamed after that value. The undocumented list form `flags: [{name: ..., value: ...}]` is no longer supported.
 - `RedisProvider` now logs Redis client failures at `error` level. Previously, an unavailable Redis silently resolved every flag to its default value, with nothing in the logs.
 - The profiler panel no longer breaks on object flags or on array and date context attributes: these values are now shown with the VarDumper, like in other Symfony panels.
@@ -40,6 +41,12 @@ See [UPGRADE.md][upgrade-0.4] for details and examples.
 - `user_provider` now defaults to `false`, as it effectively was in 0.3. An explicit `auto` now takes effect with SecurityBundle, and `true` no longer fails.
 - Move logic that must run on every request out of evaluation context providers, which now run on the first flag evaluation. `API::getEvaluationContext()` no longer returns a `MutableEvaluationContext`.
 - Replace `ResolutionDetailsTrait::toBool()` with `parseBool()`.
+
+## [0.3.1] - 2026-11-08
+
+### Fixed
+
+- A `#[FeatureGate]` placed on a closure controller now fails with an `Error` (the attribute only targets methods) instead of being ignored.
 
 ## [0.3.0] - 2026-06-15
 
@@ -79,7 +86,8 @@ See [UPGRADE.md][upgrade-0.4] for details and examples.
 
 Initial release.
 
-[Unreleased]: https://github.com/aubes/openfeature-bundle/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/aubes/openfeature-bundle/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/aubes/openfeature-bundle/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/aubes/openfeature-bundle/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/aubes/openfeature-bundle/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/aubes/openfeature-bundle/compare/v0.1.0...v0.1.1

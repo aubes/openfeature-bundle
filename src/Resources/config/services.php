@@ -21,7 +21,9 @@ return static function (ContainerConfigurator $container): void {
     $services = $container->services();
 
     // Isolated instance (SDK >= 2.3): no state shared with the global singleton or other kernels
-    $services->set(API::class, OpenFeatureAPI::class);
+    $services->set(API::class, OpenFeatureAPI::class)
+        // Clients copy this logger: without it, errors caught during evaluation are not logged
+        ->call('setLogger', [service('logger')->ignoreOnInvalid()]);
 
     $services->set(Client::class)
         ->factory([service(API::class), 'getClient'])

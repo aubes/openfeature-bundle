@@ -22,6 +22,12 @@ $client = OpenFeatureAPI::getInstance()->getClient();
 public function __construct(private readonly Client $client) {}
 ```
 
+### If you upgrade from 0.3.0 and use `#[FeatureGate]`
+
+This fix was also released in 0.3.1: skip this section if you already run 0.3.1.
+
+A `#[FeatureGate]` placed on a closure controller now fails with an `Error` (the attribute only targets methods) instead of being ignored.
+
 ### If you configure the bundle
 
 **`evaluation_context.user_provider` defaults to `false`.** The previous default, `auto`, always resolved to `false` because of a bug, so nothing changes by default. If you set `auto` or `true` explicitly, it now works: with SecurityBundle enabled, the identifier of the authenticated user becomes the targeting key, and it is sent to your flag provider. To enable it:

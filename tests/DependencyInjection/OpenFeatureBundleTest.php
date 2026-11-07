@@ -15,11 +15,14 @@ use Aubes\OpenFeatureBundle\Profiler\OpenFeatureDataCollector;
 use Aubes\OpenFeatureBundle\Profiler\ProfilerHook;
 use Aubes\OpenFeatureBundle\Provider\InMemoryProvider;
 use Aubes\OpenFeatureBundle\Tests\Fixtures\ContextRecordingHook;
+use Aubes\OpenFeatureBundle\Tests\Fixtures\FailingHook;
 use Aubes\OpenFeatureBundle\Twig\OpenFeatureExtension;
 use OpenFeature\interfaces\flags\API;
 use OpenFeature\interfaces\flags\Client;
+use OpenFeature\OpenFeatureAPI;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\CheckExceptionOnInvalidReferenceBehaviorPass;
 use Symfony\Component\DependencyInjection\Compiler\MergeExtensionConfigurationPass;
@@ -347,5 +350,24 @@ class OpenFeatureBundleTest extends TestCase
 
         $definition = $container->getDefinition('app.custom_hook');
         $this->assertTrue($definition->hasTag('openfeature.hook'));
+    }
+
+    public function testEvaluationErrorsCaughtByTheSdkAreLogged(): void
+    {
+        $container = $this->createContainer();
+        $container->register('logger')->setSynthetic(true)->setPublic(true);
+        $container->register('app.failing_hook', FailingHook::class)->addTag('openfeature.hook');
+        $container->getDefinition(API::class)->setPublic(true);
+        $container->compile();
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('error')
+            ->with($this->anything(), $this->callback(static fn (array $context): bool => $context['errorMessage'] === 'Hook failure'));
+        $container->set('logger', $logger);
+
+        $api = $container->get(API::class);
+        $this->assertInstanceOf(OpenFeatureAPI::class, $api);
+        $this->assertFalse($api->getClient()->getBooleanValue('dark_mode', false));
     }
 }
