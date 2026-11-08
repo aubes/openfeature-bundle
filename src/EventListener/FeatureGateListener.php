@@ -20,13 +20,7 @@ class FeatureGateListener
 
     public function onKernelController(ControllerEvent $event): void
     {
-        $reflector = $event->getControllerReflector();
-
-        if (!$reflector instanceof \ReflectionMethod) {
-            return;
-        }
-
-        $attributes = $reflector->getAttributes(FeatureGate::class);
+        $attributes = $event->getControllerReflector()->getAttributes(FeatureGate::class);
 
         if ($attributes === []) {
             return;

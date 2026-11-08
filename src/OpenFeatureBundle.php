@@ -19,6 +19,7 @@ use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
@@ -86,13 +87,13 @@ class OpenFeatureBundle extends AbstractBundle
                     ->addDefaultsIfNotSet()
                     ->children()
                         ->enumNode('user_provider')
-                            ->info('Populate EvaluationContext targeting key from the authenticated Symfony user. "auto" enables it if symfony/security-core is available.')
+                            ->info('Populate the EvaluationContext targeting key from the authenticated Symfony user identifier, which is sent to the flag provider. "auto" enables it if SecurityBundle is enabled. Disabled by default.')
                             ->beforeNormalization()
                                 ->ifTrue(\is_bool(...))
                                 ->then(static fn (bool $v): string => $v ? 'true' : 'false')
                             ->end()
                             ->values(['auto', 'true', 'false'])
-                            ->defaultValue('auto')
+                            ->defaultValue('false')
                         ->end()
                     ->end()
                 ->end()
@@ -100,7 +101,7 @@ class OpenFeatureBundle extends AbstractBundle
                     ->addDefaultsIfNotSet()
                     ->children()
                         ->enumNode('on_disabled')
-                            ->info('Exception thrown when a #[FeatureFlag] method-level flag is disabled. "auto" detects symfony/security-core availability.')
+                            ->info('Exception thrown when a #[FeatureGate] flag is disabled. "auto" uses "access_denied" if SecurityBundle is enabled, "http_exception" otherwise.')
                             ->values(['auto', 'access_denied', 'http_exception'])
                             ->defaultValue('auto')
                         ->end()
@@ -193,13 +194,18 @@ class OpenFeatureBundle extends AbstractBundle
             $builder->setDefinition(Provider\RedisProvider::class, $definition);
         }
 
+        // Services from other bundles are not visible here (isolated merge container), only parameters are
+        /** @var array<string, class-string> $bundles */
+        $bundles = $builder->getParameter('kernel.bundles');
+        $hasSecurityBundle = isset($bundles['SecurityBundle']);
+
         $onDisabled = $config['feature_flag']['on_disabled'];
-        $hasSecurityCore = \class_exists(\Symfony\Component\Security\Core\Exception\AccessDeniedException::class);
         if ($onDisabled === 'auto') {
-            $onDisabled = $hasSecurityCore
+            // Only the SecurityBundle firewall turns an AccessDeniedException into a 403 (or a login redirect)
+            $onDisabled = $hasSecurityBundle
                 ? 'access_denied'
                 : 'http_exception';
-        } elseif ($onDisabled === 'access_denied' && !$hasSecurityCore) {
+        } elseif ($onDisabled === 'access_denied' && !\class_exists(\Symfony\Component\Security\Core\Exception\AccessDeniedException::class)) {
             throw new \LogicException('Setting "on_disabled" to "access_denied" requires symfony/security-core. Install it or use "http_exception".');
         }
 
@@ -207,19 +213,19 @@ class OpenFeatureBundle extends AbstractBundle
         $builder->setParameter('open_feature.feature_flag.status_code', $config['feature_flag']['status_code']);
 
         $userProvider = $config['evaluation_context']['user_provider'];
-        $hasTokenStorage = $builder->has('security.token_storage');
         if ($userProvider === 'auto') {
-            $userProvider = $hasTokenStorage
+            $userProvider = $hasSecurityBundle
                 ? 'true'
                 : 'false';
-        } elseif ($userProvider === 'true' && !$hasTokenStorage) {
+        } elseif ($userProvider === 'true' && !$hasSecurityBundle) {
             throw new \LogicException('Setting "user_provider" to "true" requires symfony/security-bundle to be enabled. Install and enable it or use "false".');
         }
         $builder->setParameter('open_feature.evaluation_context.user_provider', $userProvider);
 
         if ($userProvider === 'true') {
             $definition = new Definition(UserEvaluationContextProvider::class);
-            $definition->addArgument(new Reference('security.token_storage'));
+            // Symfony 6.4 registers no security service when SecurityBundle is enabled but not configured
+            $definition->addArgument(new Reference('security.token_storage', ContainerInterface::NULL_ON_INVALID_REFERENCE));
             $definition->addTag('openfeature.evaluation_context_provider', ['priority' => 0]);
             $builder->setDefinition(UserEvaluationContextProvider::class, $definition);
         }

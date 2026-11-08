@@ -14,7 +14,9 @@ public function checkout(): Response
 }
 ```
 
-When the flag evaluates to `false`, an exception is thrown (403 by default). The exception message includes the flag name for easier debugging.
+When the flag evaluates to `false`, access is denied with an exception whose message includes the flag name. The response depends on `on_disabled` (see below): with SecurityBundle, the firewall returns a 403 to an authenticated user and starts authentication for an anonymous one (redirect to the login page, or 401). Without SecurityBundle, the response is a 403 by default.
+
+The flag is evaluated with `false` as default value: if it cannot be evaluated (unknown flag, provider error), the gate stays closed.
 
 ## Stacking multiple gates
 
@@ -35,7 +37,7 @@ The exception type is auto-detected:
 
 | `on_disabled` | Exception |
 |---|---|
-| `auto` (default) | `AccessDeniedException` if `symfony/security-core` is installed, `HttpException` otherwise |
+| `auto` (default) | `AccessDeniedException` if SecurityBundle is enabled, `HttpException` otherwise |
 | `access_denied` | `AccessDeniedException` (always) |
 | `http_exception` | `HttpException` (always, with configurable status code) |
 
